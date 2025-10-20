@@ -257,7 +257,6 @@ rignore==0.6.4
 rlp==4.1.0
 rpds-py==0.24.0
 rsa==4.9.1
-s3fs==2023.6.0
 safetensors==0.5.3
 scikit-learn==1.7.1
 scipy==1.16.1
