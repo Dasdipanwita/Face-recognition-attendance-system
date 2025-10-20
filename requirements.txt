@@ -145,9 +145,9 @@ kubernetes==33.1.0
 langchain==0.3.26
 langchain-community==0.3.26
 langchain-core==0.3.67
-langchain-google-genai==0.0.6
-langchain-openai==0.3.27
 langchain-text-splitters==0.3.8
+langchain-google-genai==1.0.0
+langchain-openai==0.3.27
 langchain-together==0.3.0
 langsmith==0.4.4
 libclang==18.1.1
