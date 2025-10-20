@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<cascade type_id="opencv-cascade-classifier"><stageType>BOOST</stageType>
+  <featureType>HAAR</featureType>
+  <height>24</height>
+  <width>24</width>
+  <stageNum>25</stageNum>
+  <stages>
+    <!-- stages omitted for brevity - this is a placeholder for the actual cascade data -->
+    <stage>
+      <maxWeakCount>1</maxWeakCount>
+      <stageThreshold>-1.</stageThreshold>
+      <weakClassifiers>
+        <weakClassifier>
+          <internalNodes>0 -1 0 -1</internalNodes>
+          <leafValues>1. -1.</leafValues>
+        </weakClassifier>
+      </weakClassifiers>
+    </stage>
+  </stages>
+  <features>
+    <feature>
+      <rect>0 0 24 24</rect>
+    </feature>
+  </features>
+</cascade></opencv_storage>

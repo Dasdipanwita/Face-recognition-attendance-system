@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+      <h2 style="margin: 0;">My Attendance Records</h2>
+      <p style="color: var(--gray); margin-top: 0.5rem;">{{ date }}</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+      <a href="{{ url_for('recognizer_control') }}" class="btn">Mark Attendance</a>
+      <a href="{{ url_for('user_dashboard') }}" class="btn secondary">Dashboard</a>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  {% if records and records|length > 0 %}
+    <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+      <div style="text-align: center;">
+        <div style="font-size: 2.5rem; font-weight: 700; color: var(--success);">{{ records|length }}</div>
+        <div style="color: var(--gray); font-weight: 500;">Times Marked Today</div>
+      </div>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width: 80px;">#</th>
+          <th>Name</th>
+          <th style="width: 150px;">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td style="font-weight: 600;">{{ row[0] }}</td>
+            <td>{{ row[1] if row|length > 1 else '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05)); border-radius: 15px;">
+      <div style="font-size: 4rem; margin-bottom: 1rem;">📋</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">No Attendance Records Today</h3>
+      <p style="color: var(--gray); margin-bottom: 2rem;">You haven't marked attendance yet today</p>
+      <a href="{{ url_for('recognizer_control') }}" class="btn">Mark Attendance Now</a>
+    </div>
+  {% endif %}
+
+  <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(99, 102, 241, 0.1); border-left: 4px solid var(--primary); border-radius: 12px;">
+    <h4 style="color: var(--primary); margin-bottom: 0.5rem;">ℹ️ Note</h4>
+    <p style="color: var(--darker);">You can only view your own attendance records. For complete attendance reports, please contact the administrator.</p>
+  </div>
+{% endblock %}

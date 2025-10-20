@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div style="margin-bottom: 2rem;">
+    <h2>Attendance History</h2>
+    <p style="color: var(--gray);">Browse past attendance records by date</p>
+  </div>
+
+  {% if files and files|length > 0 %}
+    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05)); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; text-align: center;">
+      <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{{ files|length }}</div>
+      <div style="color: var(--gray); font-weight: 500;">Days of Records Available</div>
+    </div>
+
+    <ul class="file-list">
+      {% for f in files %}
+        <li>
+          <a href="{{ url_for('attendance_by_date', date=f) }}">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 1.1rem; font-weight: 600;">📅 {{ f }}</div>
+                <div style="font-size: 0.9rem; color: var(--gray); margin-top: 0.25rem;">Click to view attendance</div>
+              </div>
+              <div style="color: var(--primary);">→</div>
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05)); border-radius: 15px;">
+      <div style="font-size: 4rem; margin-bottom: 1rem;">📚</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">No Attendance Files Found</h3>
+      <p style="color: var(--gray); margin-bottom: 2rem;">Start recording attendance to build your history</p>
+      <a href="{{ url_for('recognizer_control') }}" class="btn">Start Camera</a>
+    </div>
+  {% endif %}
+{% endblock %}

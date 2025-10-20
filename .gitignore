@@ -1,0 +1,13 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Venv
+venv/
+.venv/
+
+# Local files & models
+Attendance/
+static/faces/
+*.pkl

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+      <h2 style="margin-bottom: 0.5rem;">My Dashboard</h2>
+      <p style="color: var(--gray);">Welcome, <strong>{{ username }}</strong></p>
+    </div>
+    <a href="{{ url_for('logout') }}" class="btn danger">Logout</a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+    <div style="padding: 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 15px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📷</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">Take Attendance</h3>
+      <p style="color: var(--gray); margin-bottom: 1.5rem;">Use camera to mark attendance</p>
+      <a href="{{ url_for('recognizer_control') }}" class="btn">Open Camera</a>
+    </div>
+
+    <div style="padding: 2rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border-radius: 15px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">My Attendance</h3>
+      <p style="color: var(--gray); margin-bottom: 1.5rem;">View your attendance records</p>
+      <a href="{{ url_for('user_my_attendance') }}" class="btn success">View Records</a>
+    </div>
+  </div>
+
+  <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05)); padding: 2rem; border-radius: 15px; margin-bottom: 2rem;">
+    <h3 style="color: var(--darker); margin-bottom: 1rem;">📝 How to Mark Attendance</h3>
+    <ol style="color: var(--gray); line-height: 2; padding-left: 1.5rem;">
+      <li>Click "Open Camera" to start the face recognition system</li>
+      <li>Click "Start Camera" on the camera page</li>
+      <li>Look directly at the camera</li>
+      <li>Wait for your face to be recognized</li>
+      <li>Attendance will be marked automatically and camera will stop</li>
+      <li>You'll see a success message confirming attendance</li>
+    </ol>
+  </div>
+
+  <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);">
+    <h3 style="color: var(--darker); margin-bottom: 1rem;">ℹ️ User Information</h3>
+    <div style="color: var(--gray); line-height: 1.8;">
+      <p><strong>Username:</strong> {{ username }}</p>
+      <p><strong>Role:</strong> User</p>
+      <p><strong>Access Level:</strong> Can view own attendance records only</p>
+    </div>
+  </div>
+{% endblock %}

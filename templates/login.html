@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title or 'Login' }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div style="max-width: 900px; width: 100%; display: grid; grid-template-columns: 1fr; gap: 0; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); overflow: hidden;">
+
+      <!-- Left Side: Branding -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3rem; display: none; flex-direction: column; justify-content: center; align-items: center; color: white;" id="brandingSide">
+        <div style="font-size: 5rem; margin-bottom: 1rem;">👤</div>
+        <h1 style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: 700;">Face Attendance</h1>
+        <p style="font-size: 1.1rem; text-align: center; opacity: 0.95; line-height: 1.6;">Secure and modern face recognition system for attendance tracking</p>
+        <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 12px; backdrop-filter: blur(10px);">
+          <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">✓ Fast face recognition</p>
+          <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">✓ Real-time attendance tracking</p>
+          <p style="font-size: 0.95rem;">✓ Secure admin controls</p>
+        </div>
+      </div>
+
+      <!-- Right Side: Login Form -->
+      <div style="padding: 3rem;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <h1 style="color: var(--primary); font-size: 2rem; margin-bottom: 0.5rem; font-weight: 700;">Welcome Back</h1>
+          <p style="color: var(--gray);">Sign in to your account</p>
+        </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages">
+            {% for category, message in messages %}
+              <div class="flash-message {{ category }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--darker);">Login As:</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+            <label style="cursor: pointer; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; text-align: center; transition: all 0.3s ease;" id="userLabel">
+              <input type="radio" name="role" value="user" checked style="display: none;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">👤</div>
+              <div style="font-weight: 600; color: var(--darker);">User</div>
+              <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem;">No password needed</div>
+            </label>
+            <label style="cursor: pointer; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; text-align: center; transition: all 0.3s ease;" id="adminLabel">
+              <input type="radio" name="role" value="admin" style="display: none;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">👨‍💼</div>
+              <div style="font-weight: 600; color: var(--darker);">Admin</div>
+              <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem;">Password required</div>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label for="username" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--darker);">
+            <span id="usernameLabel">Your Name</span>:
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            placeholder="Enter your registered name"
+            style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; transition: all 0.3s ease;"
+            onfocus="this.style.borderColor='var(--primary)'"
+            onblur="this.style.borderColor='var(--border)'"
+          />
+          <small id="usernameHint" style="color: var(--gray); font-size: 0.85rem;">Enter the name you used during registration</small>
+        </div>
+
+        <div style="margin-bottom: 2rem; display: none;" id="passwordField">
+          <label for="password" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--darker);">Password:</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter admin password"
+            style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; font-size: 1rem; transition: all 0.3s ease;"
+            onfocus="this.style.borderColor='var(--primary)'"
+            onblur="this.style.borderColor='var(--border)'"
+          />
+          <small style="color: var(--gray); font-size: 0.85rem;">Default: admin123</small>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; margin-bottom: 1rem;">Sign In</button>
+
+        <div style="text-align: center; padding-top: 1rem; border-top: 1px solid var(--border);">
+          <p style="color: var(--gray); margin-bottom: 1rem;">Don't have an account?</p>
+          <a href="{{ url_for('register_page') }}" class="btn secondary" style="width: 100%; display: block; text-align: center;">Register New User</a>
+        </div>
+      </form>
+
+      <script>
+        // Toggle password field and UI based on role
+        const roleInputs = document.querySelectorAll('input[name="role"]');
+        const passwordField = document.getElementById('passwordField');
+        const passwordInput = document.getElementById('password');
+        const usernameInput = document.getElementById('username');
+        const usernameLabel = document.getElementById('usernameLabel');
+        const usernameHint = document.getElementById('usernameHint');
+        const userLabel = document.getElementById('userLabel');
+        const adminLabel = document.getElementById('adminLabel');
+
+        function updateUI(role) {
+          if (role === 'admin') {
+            // Admin mode
+            passwordField.style.display = 'block';
+            passwordInput.required = true;
+            usernameLabel.textContent = 'Admin Username';
+            usernameInput.placeholder = 'Enter admin username';
+            usernameHint.textContent = 'Default username: admin';
+            adminLabel.style.borderColor = 'var(--primary)';
+            adminLabel.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))';
+            userLabel.style.borderColor = 'var(--border)';
+            userLabel.style.background = 'white';
+          } else {
+            // User mode
+            passwordField.style.display = 'none';
+            passwordInput.required = false;
+            usernameLabel.textContent = 'Your Name';
+            usernameInput.placeholder = 'Enter your registered name';
+            usernameHint.textContent = 'Enter the name you used during registration';
+            userLabel.style.borderColor = 'var(--primary)';
+            userLabel.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))';
+            adminLabel.style.borderColor = 'var(--border)';
+            adminLabel.style.background = 'white';
+          }
+        }
+
+        // Add click handlers to labels
+        userLabel.addEventListener('click', function() {
+          roleInputs[0].checked = true;
+          updateUI('user');
+        });
+
+        adminLabel.addEventListener('click', function() {
+          roleInputs[1].checked = true;
+          updateUI('admin');
+        });
+
+        roleInputs.forEach(input => {
+          input.addEventListener('change', function() {
+            updateUI(this.value);
+          });
+        });
+
+        // Initialize UI
+        const selectedRole = document.querySelector('input[name="role"]:checked').value;
+        updateUI(selectedRole);
+      </script>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Responsive design for larger screens */
+    @media (min-width: 768px) {
+      #brandingSide {
+        display: flex !important;
+      }
+      body > div > div {
+        grid-template-columns: 1fr 1fr !important;
+      }
+    }
+  </style>
+
+  <footer class="footer" style="position: fixed; bottom: 0; width: 100%; background: transparent; color: white;">
+    <p>© {{ year or 2025 }} Face Attendance</p>
+  </footer>
+</body>
+</html>

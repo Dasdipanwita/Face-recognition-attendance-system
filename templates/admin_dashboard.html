@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+      <h2 style="margin-bottom: 0.5rem;">Admin Dashboard</h2>
+      <p style="color: var(--gray);">Welcome, <strong>{{ username }}</strong></p>
+    </div>
+    <a href="{{ url_for('logout') }}" class="btn danger">Logout</a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+    <div style="padding: 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 15px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">All Attendance</h3>
+      <p style="color: var(--gray); margin-bottom: 1.5rem;">View complete attendance records</p>
+      <a href="{{ url_for('attendance_today') }}" class="btn">View Today</a>
+    </div>
+
+    <div style="padding: 2rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.1)); border-radius: 15px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">History</h3>
+      <p style="color: var(--gray); margin-bottom: 1.5rem;">Browse past attendance records</p>
+      <a href="{{ url_for('attendance_history') }}" class="btn">View History</a>
+    </div>
+
+    <div style="padding: 2rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border-radius: 15px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+      <h3 style="color: var(--darker); margin-bottom: 0.5rem;">User Access</h3>
+      <p style="color: var(--gray); margin-bottom: 1.5rem;">Manage who can mark attendance</p>
+      <a href="{{ url_for('manage_allowed_users') }}" class="btn" style="background: #f59e0b; color: white;">Manage Users</a>
+    </div>
+  </div>
+
+  <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);">
+    <h3 style="color: var(--darker); margin-bottom: 1.5rem;">🔑 Admin Privileges</h3>
+    <ul style="color: var(--gray); line-height: 2; padding-left: 1.5rem;">
+      <li>View all users' attendance records</li>
+      <li>Access attendance history and reports</li>
+      <li>Register new users in the system</li>
+      <li>Control user access permissions for attendance</li>
+      <li>Monitor daily attendance statistics</li>
+      <li>Export attendance data (coming soon)</li>
+    </ul>
+
+    <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(16, 185, 129, 0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 0.75rem;">
+      <h4 style="color: var(--darker); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+        <span style="font-size: 1.5rem;">ℹ️</span>
+        Default Admin Credentials
+      </h4>
+      <p style="margin: 0; color: var(--gray);">Use these to log in the first time, then update the password below.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+        <div style="background: white; border: 1px solid var(--border); border-radius: 10px; padding: 1rem;">
+          <strong>Username</strong>
+          <div style="font-family: 'Inter', monospace; font-size: 1.05rem;">admin</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--border); border-radius: 10px; padding: 1rem;">
+          <strong>Password</strong>
+          <div style="font-family: 'Inter', monospace; font-size: 1.05rem;">admin123</div>
+        </div>
+      </div>
+      <a href="{{ url_for('change_admin_password') }}" class="btn" style="align-self: flex-start; background: var(--primary); color: white;">Change Admin Password</a>
+    </div>
+  </div>
+{% endblock %}
