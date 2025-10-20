@@ -209,12 +209,19 @@ def login():
                     break
 
             if matched_name:
-                # Load user's role
+                # Load user's role - use exact case from registered names for consistency
                 user_role = 'user'  # default
                 if os.path.isfile(roles_path):
                     with open(roles_path, 'rb') as f:
                         roles = pickle.load(f)
+                        # Try exact match first, then case-insensitive fallback
                         user_role = roles.get(matched_name, 'user')
+                        if user_role == 'user':
+                            # If not found with exact case, try case-insensitive lookup
+                            for role_name, role_value in roles.items():
+                                if role_name.lower() == matched_name.lower():
+                                    user_role = role_value
+                                    break
 
                 # For admin users, verify password
                 if user_role == 'admin':
