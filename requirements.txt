@@ -146,7 +146,7 @@ langchain==0.3.26
 langchain-community==0.3.26
 langchain-core==0.3.67
 langchain-text-splitters==0.3.8
-langchain-google-genai==1.0.0
+langchain-google-genai==2.1.12
 langchain-openai==0.3.27
 langchain-together==0.3.0
 langsmith==0.4.4
