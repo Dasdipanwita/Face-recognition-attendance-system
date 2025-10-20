@@ -220,27 +220,45 @@ def _worker_loop():
     else:
         print(f"[OK] Cascade classifier loaded successfully")
 
-    # Improved camera initialization with retry logic
+    # Improved camera initialization with retry logic (cross-platform)
     cap = None
     for attempt in range(3):
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # DirectShow backend for Windows
-        if cap.isOpened():
-            # Set camera properties for better performance
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            cap.set(cv2.CAP_PROP_FPS, 30)
-
-            # Read a test frame to ensure camera is working
-            test_ret, test_frame = cap.read()
-            if test_ret and test_frame is not None:
-                print(f"[CAMERA] Camera initialized successfully on attempt {attempt + 1}")
-                break
-            else:
-                print(f"[CAMERA] Camera opened but couldn't read frame on attempt {attempt + 1}")
+        try:
+            # Try different backends for cross-platform compatibility
+            backends = [0, cv2.CAP_V4L2, cv2.CAP_GSTREAMER, cv2.CAP_ANY]
+            for backend in backends:
+                cap = cv2.VideoCapture(0 + backend)  # Try different backend IDs
+                if cap.isOpened():
+                    print(f"[CAMERA] Camera opened successfully with backend {backend}")
+                    break
                 cap.release()
                 cap = None
-        else:
-            print(f"[CAMERA] Failed to open camera on attempt {attempt + 1}")
+
+            if cap is None:
+                cap = cv2.VideoCapture(0)  # Fallback to default
+
+            if cap.isOpened():
+                # Set camera properties for better performance
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                cap.set(cv2.CAP_PROP_FPS, 30)
+
+                # Read a test frame to ensure camera is working
+                test_ret, test_frame = cap.read()
+                if test_ret and test_frame is not None:
+                    print(f"[CAMERA] Camera initialized successfully on attempt {attempt + 1}")
+                    break
+                else:
+                    print(f"[CAMERA] Camera opened but couldn't read frame on attempt {attempt + 1}")
+                    cap.release()
+                    cap = None
+            else:
+                print(f"[CAMERA] Failed to open camera on attempt {attempt + 1}")
+        except Exception as e:
+            print(f"[CAMERA] Exception during camera init attempt {attempt + 1}: {e}")
+            if cap:
+                cap.release()
+            cap = None
 
         if attempt < 2:
             time.sleep(0.5)
