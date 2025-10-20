@@ -288,7 +288,6 @@ tenacity==8.5.0
 tensorboard==2.19.0
 tensorboard-data-server==0.7.2
 tensorflow==2.20.0
-tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.6.1
 terminado==0.18.1
 threadpoolctl==3.5.0
