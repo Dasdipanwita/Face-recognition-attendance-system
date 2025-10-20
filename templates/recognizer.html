@@ -1,19 +1,47 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  {% if running %}
-  <script>
-    // Auto-refresh to check if camera stopped and show success/failure message
-    setTimeout(function() {
-      window.location.reload();
-    }, 3000);
-  </script>
-  {% endif %}
+  <div class="recognizer-controls">
+    <h2>Face Recognition Camera</h2>
+    <p style="color: var(--gray); margin: 0;">The camera will stream from your device; recognition happens on the server.</p>
+
+    <div style="margin-top: 1.5rem;">
+      <button id="start-camera" class="btn success">Start Camera</button>
+      <button id="stop-camera" class="btn danger" disabled>Stop Camera</button>
+      <a href="{{ url_for('attendance_today') }}" class="btn secondary" style="margin-left: 1rem;">View Attendance</a>
+    </div>
+
+    <div id="status" class="status stopped" style="margin-top: 1rem;">● Camera Stopped</div>
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 8px;">
+      <p style="color: var(--darker); font-weight: 600; margin: 0;">Verifying Face for: <strong style="color: #3b82f6;">{{ username }}</strong></p>
+      <p style="color: var(--gray); font-size: 0.9rem; margin: 0.5rem 0 0 0;">The camera stops automatically after a match or mismatch.</p>
+    </div>
+
+    <!-- Live Video Feed -->
+    <div style="margin: 1.5rem auto; max-width: 800px;">
+      <video id="video" width="640" height="480" autoplay playsinline style="border-radius: 10px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); border: 3px solid var(--primary);"></video>
+      <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    </div>
+  </div>
 
   <script>
-    // Show popup notification with sound
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const startButton = document.getElementById('start-camera');
+    const stopButton = document.getElementById('stop-camera');
+    const statusDiv = document.getElementById('status');
+    let stream = null;
+    let intervalId = null;
+
+    function updateStatus(message, isRunning = false) {
+      statusDiv.textContent = `● ${message}`;
+      statusDiv.className = isRunning ? 'status running' : 'status stopped';
+    }
+
     function showPopup(message, type) {
-      // Create popup overlay
       const overlay = document.createElement('div');
       overlay.style.cssText = `
         position: fixed;
@@ -21,15 +49,13 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.6);
         display: flex;
         justify-content: center;
         align-items: center;
         z-index: 9999;
-        animation: fadeIn 0.3s ease-out;
       `;
 
-      // Create popup box
       const popup = document.createElement('div');
       const isSuccess = type === 'success';
       const bgColor = isSuccess ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)';
@@ -43,7 +69,6 @@
         text-align: center;
         max-width: 500px;
         width: 90%;
-        animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
       `;
 
       popup.innerHTML = `
@@ -56,22 +81,13 @@
           align-items: center;
           justify-content: center;
           margin: 0 auto 1.5rem auto;
-          box-shadow: 0 10px 30px ${isSuccess ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'};
         ">
           <span style="font-size: 3rem; color: white; font-weight: bold;">${icon}</span>
         </div>
-        <h2 style="
-          color: #0f172a;
-          font-size: 1.8rem;
-          margin-bottom: 1rem;
-          font-weight: 700;
-        ">${isSuccess ? 'Verification Successful!' : 'Verification Failed!'}</h2>
-        <p style="
-          color: #64748b;
-          font-size: 1.1rem;
-          line-height: 1.6;
-          margin-bottom: 2rem;
-        ">${message}</p>
+        <h2 style="color: #0f172a; font-size: 1.8rem; margin-bottom: 1rem; font-weight: 700;">
+          ${isSuccess ? 'Verification Successful!' : 'Verification Failed!'}
+        </h2>
+        <p style="color: #64748b; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">${message}</p>
         <button onclick="closePopup()" style="
           background: ${bgColor};
           color: white;
@@ -81,149 +97,87 @@
           font-weight: 600;
           border-radius: 12px;
           cursor: pointer;
-          box-shadow: 0 4px 15px ${isSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
-          transition: all 0.3s ease;
-        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 25px ${isSuccess ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px ${isSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}';">
+        ">
           OK
         </button>
       `;
 
       overlay.appendChild(popup);
       document.body.appendChild(overlay);
-
-      // Play notification sound
-      try {
-        const audio = new Audio(isSuccess ? 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSZ8zPDTijaIGWi763+fTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUmfMzw04o2iBlouu' : 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSZ8zPDTijaIGWi763+fTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUmfMzw04o2iBlo');
-        audio.volume = 0.3;
-        audio.play().catch(() => {}); // Ignore if audio doesn't play
-      } catch (e) {}
-
-      // Auto-close after 5 seconds
-      setTimeout(() => {
-        closePopup();
-      }, 5000);
     }
 
     function closePopup() {
       const overlay = document.querySelector('div[style*="z-index: 9999"]');
       if (overlay) {
-        overlay.style.animation = 'fadeOut 0.3s ease-out';
-        setTimeout(() => overlay.remove(), 300);
+        overlay.remove();
       }
     }
 
-    // Add CSS animations
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-      }
-      @keyframes popIn {
-        0% { transform: scale(0.5); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
+    function startCamera() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(mediaStream => {
+          stream = mediaStream;
+          video.srcObject = stream;
+          startButton.disabled = true;
+          stopButton.disabled = false;
+          updateStatus('Camera Running', true);
+          intervalId = setInterval(sendFrame, 300);
+        })
+        .catch(err => {
+          console.error('Error accessing camera:', err);
+          alert('Unable to access camera. Please grant permission and ensure a camera is connected.');
+        });
+    }
 
-    // Check for flash messages and show popup
-    document.addEventListener('DOMContentLoaded', function() {
-      const flashMessages = document.querySelectorAll('.flash-message');
-      flashMessages.forEach(function(msg) {
-        const text = msg.textContent.trim();
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      updateStatus('Camera Stopped', false);
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
 
-        // Check if it's a success message
-        if (msg.classList.contains('success') && text.includes('SUCCESS')) {
-          showPopup(text, 'success');
-        }
-        // Check if it's a mismatch/failure message
-        else if (msg.classList.contains('error') && text.includes('MISMATCH')) {
-          showPopup(text, 'error');
-        }
-      });
-    });
+    function sendFrame() {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const data = canvas.toDataURL('image/jpeg');
+
+      fetch("{{ url_for('detect') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ image: data })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.match) {
+            showPopup(data.message || 'Attendance recorded', 'success');
+            stopCamera();
+          } else if ((data.message || '').toLowerCase().includes('face not recognized')) {
+            showPopup(data.message || 'Face not recognized', 'error');
+            stopCamera();
+          } else if (data.message) {
+            updateStatus(data.message, true);
+          }
+        })
+        .catch(error => {
+          console.error('Error sending frame:', error);
+          updateStatus('Error communicating with server', false);
+          stopCamera();
+        });
+    }
+
+    startButton.addEventListener('click', startCamera);
+    stopButton.addEventListener('click', stopCamera);
   </script>
-  <div class="recognizer-controls">
-    <h2>Face Recognition Camera</h2>
-
-    {% if running %}
-      <div class="status running">● Camera Running</div>
-    {% else %}
-      <div class="status stopped">● Camera Stopped</div>
-    {% endif %}
-
-    <div style="margin-top: 1.5rem;">
-      {% if running %}
-        <form method="POST" action="{{ url_for('recognizer_stop') }}" style="display: inline;">
-          <button type="submit" class="btn danger">Stop Camera</button>
-        </form>
-      {% else %}
-        <form method="POST" action="{{ url_for('recognizer_start') }}" style="display: inline;">
-          <button type="submit" class="btn success">Start Camera</button>
-        </form>
-      {% endif %}
-
-      <a href="{{ url_for('attendance_today') }}" class="btn secondary" style="margin-left: 1rem;">View Attendance</a>
-    </div>
-  </div>
-
-  {% if running %}
-    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05)); padding: 2rem; border-radius: 15px; text-align: center;">
-      <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 8px;">
-        <p style="color: var(--darker); font-weight: 600; margin: 0;">Verifying Face for: <strong style="color: #3b82f6;">{{ username }}</strong></p>
-        <p style="color: var(--gray); font-size: 0.9rem; margin: 0.5rem 0 0 0;">The camera will automatically stop after successful verification or if a mismatch is detected</p>
-      </div>
-
-      <!-- Live Video Feed -->
-      <div style="margin: 1.5rem auto; max-width: 800px;">
-        <img src="{{ url_for('video_feed') }}"
-             style="width: 100%; max-width: 640px; border-radius: 10px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); border: 3px solid var(--primary);"
-             alt="Live Camera Feed">
-      </div>
-
-      <div style="display: inline-block; padding: 1rem 2rem; background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); margin-top: 1rem;">
-        <p style="margin: 0; color: var(--darker); font-weight: 600;">Face Verification in Progress...</p>
-        <p style="margin: 0.5rem 0 0 0; color: var(--gray); font-size: 0.9rem;">
-          <span style="color: #10b981;">✓ Match</span> = Attendance recorded & camera stops |
-          <span style="color: #ef4444;">✗ Mismatch</span> = Camera stops without recording
-        </p>
-      </div>
-    </div>
-  {% else %}
-    <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.1)); padding: 2rem; border-radius: 15px; text-align: center;">
-      <p style="color: var(--gray);">Camera is currently stopped. Click "Start Camera" to begin face recognition and attendance tracking.</p>
-    </div>
-  {% endif %}
-
-  <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05)); border-radius: 15px;">
-    <h3 style="color: var(--darker); margin-bottom: 1rem;">How Automatic Camera Control Works:</h3>
-    <ul style="color: var(--gray); line-height: 2;">
-      <li><strong>Step 1:</strong> Click "Start Camera" to begin face verification for <strong>{{ username }}</strong></li>
-      <li><strong>Step 2:</strong> Position your face clearly in front of the camera</li>
-      <li><strong>Step 3:</strong> The system verifies your face against trained data (requires 3 consecutive matches)</li>
-      <li style="color: #10b981; font-weight: 600;">
-        <strong>SUCCESS SCENARIO:</strong> If your face matches the trained data:
-        <ul style="font-weight: normal; color: var(--gray); margin-top: 0.5rem;">
-          <li>Attendance is automatically recorded</li>
-          <li>Camera stops automatically</li>
-          <li>Success message is displayed</li>
-        </ul>
-      </li>
-      <li style="color: #ef4444; font-weight: 600;">
-        <strong>MISMATCH SCENARIO:</strong> If a different face is detected:
-        <ul style="font-weight: normal; color: var(--gray); margin-top: 0.5rem;">
-          <li>System counts consecutive mismatches (up to 5)</li>
-          <li>After 5 mismatches, camera stops automatically</li>
-          <li>NO attendance is recorded</li>
-          <li>Error message shows which face was detected</li>
-        </ul>
-      </li>
-      <li><strong>Anti-duplicate:</strong> Each person can only mark attendance once per minute</li>
-      <li><strong>View Results:</strong> Check "Today's Attendance" page to see recorded entries</li>
-    </ul>
-  </div>
 {% endblock %}

@@ -353,92 +353,60 @@ def attendance_by_date(date):
 
 
 # --- Recognizer control endpoints ---
-@app.route('/recognizer/status')
-def recognizer_status():
-    return jsonify(recognizer.status())
-
-
-@app.route('/recognizer/start', methods=['POST'])
-@login_required
-def recognizer_start():
-    # Get the logged-in user
-    username = session.get('username')
-    role = session.get('role')
-
-    # All users (including admins) can only mark their own attendance
-    expected_user = username
-
-    res = recognizer.start(expected_user=expected_user)
-    # redirect back if called from UI
-    if request.headers.get('Accept', '').startswith('text/html'):
-        return redirect(url_for('recognizer_control'))
-    return jsonify(res)
-
-
-@app.route('/recognizer/stop', methods=['POST'])
-def recognizer_stop():
-    res = recognizer.stop()
-    if request.headers.get('Accept', '').startswith('text/html'):
-        return redirect(url_for('recognizer_control'))
-    return jsonify(res)
-
-
 @app.route('/recognizer')
 @login_required
 def recognizer_control():
-    state = recognizer.status()
-    last_attendance = recognizer.get_last_attendance()
     username = session.get('username')
-    role = session.get('role')
+    return render_template('recognizer.html', title='Recognizer', username=username)
 
-    # Debug logging
-    print(f"\n[RECOGNIZER PAGE] Status check:")
-    print(f"  Running: {state.get('running', False)}")
-    print(f"  Attendance recorded: {state.get('attendance_recorded', False)}")
-    print(f"  Recognition failed: {state.get('recognition_failed', False)}")
-    print(f"  Expected user: {state.get('expected_user')}")
-    print(f"  Mismatch name: {state.get('mismatch_name')}")
-    print(f"  Last attendance: {last_attendance}")
 
-    # Check if face recognition failed (face didn't match logged-in user)
-    if not state.get('running', False) and state.get('recognition_failed', False):
-        expected = state.get('expected_user', 'unknown')
-        mismatch_name = state.get('mismatch_name', 'unknown')
-        mismatch_count = state.get('mismatch_count', 0)
-        print(f"[RECOGNIZER PAGE] Showing MISMATCH message")
-        flash(
-            f"FACE MISMATCH DETECTED! The camera detected '{mismatch_name}' but you are logged in as '{expected}'. "
-            f"After {mismatch_count} failed verification attempts, the camera has been automatically stopped. "
-            f"Attendance was NOT recorded. Please ensure only '{expected}' appears in front of the camera.",
-            'error'
-        )
-        # Clear the flag
-        recognizer.clear_flags()
+@app.route('/detect', methods=['POST'])
+@login_required
+def detect():
+    try:
+        data = request.get_json()
+        image_data = data['image'].split(',')[1]
+        username = session.get('username')
 
-    # Check if attendance was just recorded and camera auto-stopped
-    elif not state.get('running', False) and state.get('attendance_recorded', False):
-        print(f"[RECOGNIZER PAGE] Showing SUCCESS message")
-        if last_attendance:
-            # For all users, verify it's their own attendance
-            if last_attendance['name'] != username:
-                flash(
-                    f"WARNING: Attendance was recorded for '{last_attendance['name']}' at {last_attendance['time']}, "
-                    f"but you are logged in as '{username}'. This indicates a face recognition error. "
-                    f"Please contact the administrator.",
-                    'error'
-                )
+        import base64
+        import numpy as np
+        import cv2
+
+        # Decode the image
+        img_bytes = base64.b64decode(image_data)
+        img_arr = np.frombuffer(img_bytes, dtype=np.uint8)
+        frame = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+
+        if frame is None:
+            print("[ERROR] Failed to decode image")
+            return jsonify({"match": False, "message": "Failed to decode image"}), 500
+
+        # Process the frame
+        result = recognizer.recognize_frame(frame, username)
+
+        # Map recognizer responses to the new schema
+        if result.get("attendance_recorded"):
+            return jsonify({"match": True, "message": result.get("message", "Attendance recorded")})
+        if result.get("recognition_failed"):
+            # Check if camera should be shut down due to security alert
+            if result.get("camera_shutdown"):
+                print(f"[SECURITY] Camera shutdown triggered for user {username}")
+                return jsonify({
+                    "match": False,
+                    "message": result.get("message", "Face not recognized"),
+                    "camera_shutdown": True
+                })
             else:
-                flash(
-                    f"SUCCESS! Attendance recorded for {last_attendance['name']} at {last_attendance['time']}. "
-                    f"Your face was successfully verified and matched with the trained data. Camera has been automatically stopped.",
-                    'success'
-                )
-        else:
-            flash("SUCCESS! Attendance recorded successfully. Camera has been automatically stopped.", 'success')
-        # Clear the flag
-        recognizer.clear_flags()
+                return jsonify({"match": False, "message": result.get("message", "Face not recognized")})
 
-    return render_template('recognizer.html', title='Recognizer', running=state.get('running', False), username=username)
+        # For intermediate statuses, keep feeding frames
+        return jsonify({
+            "match": False,
+            "message": result.get("status", "Recognition in progress")
+        })
+    except Exception as e:
+        print(f"[ERROR] detect: {e}")
+        return jsonify({"match": False, "message": str(e)}), 500
 
 
 # --- SSE stream for live attendance ---
@@ -461,27 +429,6 @@ def stream_attendance():
                 yield f"data: {{'error': '{str(e)}'}}\n\n"
             time.sleep(1)
     return Response(gen(), mimetype='text/event-stream')
-
-
-# --- Video stream for face recognition ---
-@app.route('/video_feed')
-@login_required
-def video_feed():
-    """Stream video frames from the face recognition camera"""
-    def generate():
-        import cv2
-        while True:
-            frame = recognizer.get_current_frame()
-            if frame is not None:
-                # Encode frame as JPEG
-                ret, buffer = cv2.imencode('.jpg', frame)
-                if ret:
-                    frame_bytes = buffer.tobytes()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(0.033)  # ~30 FPS
-
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 # --- Registration endpoints ---
@@ -580,13 +527,21 @@ def remove_allowed_user():
         flash('Admin users cannot be removed from the allowed list. They have permanent access.', 'error')
         return redirect(url_for('manage_allowed_users'))
 
-    if not username:
-        flash('Please enter a username', 'error')
-        return redirect(url_for('manage_allowed_users'))
-
     recognizer._remove_allowed_user(username)
     flash(f'User "{username}" removed from allowed list', 'success')
     return redirect(url_for('manage_allowed_users'))
+
+
+@app.route('/admin/reset-camera/<username>', methods=['POST'])
+@admin_required
+def reset_camera_state(username):
+    """Reset camera state for a user after security shutdown"""
+    success = recognizer.reset_camera_state(username)
+    if success:
+        flash(f'Camera state reset for user "{username}". They can now use face recognition again.', 'success')
+    else:
+        flash(f'Failed to reset camera state for user "{username}". User may not exist or may not have an active camera session.', 'error')
+    return redirect(url_for('admin_dashboard'))
 
 
 if __name__ == '__main__':
