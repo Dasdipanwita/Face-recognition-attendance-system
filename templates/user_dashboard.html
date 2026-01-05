@@ -5,7 +5,6 @@
       <h2 style="margin-bottom: 0.5rem;">My Dashboard</h2>
       <p style="color: var(--gray);">Welcome, <strong>{{ username }}</strong></p>
     </div>
-    <a href="{{ url_for('logout') }}" class="btn danger">Logout</a>
   </div>
 
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
@@ -13,7 +12,7 @@
       <div style="font-size: 3rem; margin-bottom: 1rem;">📷</div>
       <h3 style="color: var(--darker); margin-bottom: 0.5rem;">Take Attendance</h3>
       <p style="color: var(--gray); margin-bottom: 1.5rem;">Use camera to mark attendance</p>
-      <a href="{{ url_for('recognizer_control') }}" class="btn">Open Camera</a>
+      <a href="{{ url_for('recognizer_control') }}" class="btn" style="margin-top: 1rem;">Open Camera</a>
     </div>
 
     <div style="padding: 2rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border-radius: 15px; text-align: center;">

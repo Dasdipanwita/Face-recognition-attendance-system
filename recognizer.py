@@ -34,8 +34,67 @@ def _load_model_and_cascade():
             labels = pickle.load(f)
         with open(faces_path, 'rb') as f:
             faces = pickle.load(f)
+<<<<<<< HEAD
+        # Ensure labels is a list and faces is a numpy array
+        try:
+            labels = list(labels)
+        except Exception:
+            labels = [str(x) for x in labels]
+
+        faces = np.asarray(faces)
+
+        # If counts mismatch, trim to the smaller length and persist fix
+        n_labels = len(labels)
+        n_faces = faces.shape[0] if faces.ndim >= 1 else 0
+        if n_labels != n_faces:
+            m = min(n_labels, n_faces)
+            print(f"⚠️  Mismatch: {n_faces} face samples vs {n_labels} labels. Trimming to {m} entries.")
+            try:
+                labels = labels[:m]
+                faces = faces[:m]
+                # Persist corrected files
+                with open(names_path, 'wb') as f:
+                    pickle.dump(labels, f)
+                with open(faces_path, 'wb') as f:
+                    pickle.dump(faces, f)
+                print("✅ Trimmed and saved corrected `names.pkl` and `faces_data.pkl`")
+            except Exception as e:
+                print(f"⚠️  Failed to persist trimmed data: {e}")
+
         if faces.ndim != 2:
             faces = faces.reshape(faces.shape[0], -1)
+=======
+
+        # Ensure labels is a list and faces is a numpy array
+        try:
+            labels = list(labels)
+        except Exception:
+            labels = [str(x) for x in labels]
+
+        faces = np.asarray(faces)
+
+        # If counts mismatch, trim to the smaller length and persist fix
+        n_labels = len(labels)
+        n_faces = faces.shape[0] if faces.ndim >= 1 else 0
+        if n_labels != n_faces:
+            m = min(n_labels, n_faces)
+            print(f"⚠️  Mismatch: {n_faces} face samples vs {n_labels} labels. Trimming to {m} entries.")
+            try:
+                labels = labels[:m]
+                faces = faces[:m]
+                # Persist corrected files
+                with open(names_path, 'wb') as f:
+                    pickle.dump(labels, f)
+                with open(faces_path, 'wb') as f:
+                    pickle.dump(faces, f)
+                print("✅ Trimmed and saved corrected `names.pkl` and `faces_data.pkl`")
+            except Exception as e:
+                print(f"⚠️  Failed to persist trimmed data: {e}")
+
+        if faces.ndim != 2:
+            faces = faces.reshape(faces.shape[0], -1)
+
+>>>>>>> 1ed0492 (UI cleanup: removed duplicate buttons, centered header, restored camera access button)
         _knn = KNeighborsClassifier(n_neighbors=3, weights='uniform')
         _knn.fit(faces, labels)
         print("✅ KNN model loaded successfully")

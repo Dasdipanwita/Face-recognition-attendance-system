@@ -25,7 +25,59 @@ def _capture_faces(name: str):
         with _registration_lock:
             _registration_progress = {"current": 0, "total": 100, "status": "capturing", "name": name}
 
+<<<<<<< HEAD
+        # Debug info: ensure cascade file exists and report its size
+        try:
+            exists = os.path.exists(CASCADE_PATH)
+            size = os.path.getsize(CASCADE_PATH) if exists else 0
+        except Exception:
+            exists = False
+            size = 0
+        print(f"[REG] Cascade path: {CASCADE_PATH}, exists={exists}, size={size}")
+
         facedetect = cv2.CascadeClassifier(CASCADE_PATH)
+        # Fallback: try OpenCV builtin cascade if loading from data/ failed
+        if facedetect.empty():
+            try:
+                import cv2 as _cv2
+                builtin = _cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+                print(f"[REG] Primary cascade failed; trying built-in cascade at {builtin}")
+                facedetect = cv2.CascadeClassifier(builtin)
+            except Exception:
+                pass
+
+        # Fail early with a clear message if cascade still didn't load
+        if facedetect.empty():
+            with _registration_lock:
+                _registration_progress["status"] = "error"
+            raise RuntimeError(f"Face detection cascade failed to load from {CASCADE_PATH} (exists={exists}, size={size}), and built-in cascade also failed.")
+=======
+        # Debug info: ensure cascade file exists and report its size
+        try:
+            exists = os.path.exists(CASCADE_PATH)
+            size = os.path.getsize(CASCADE_PATH) if exists else 0
+        except Exception:
+            exists = False
+            size = 0
+        print(f"[REG] Cascade path: {CASCADE_PATH}, exists={exists}, size={size}")
+
+        facedetect = cv2.CascadeClassifier(CASCADE_PATH)
+        # Fallback: try OpenCV builtin cascade if loading from data/ failed
+        if facedetect.empty():
+            try:
+                import cv2 as _cv2
+                builtin = _cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+                print(f"[REG] Primary cascade failed; trying built-in cascade at {builtin}")
+                facedetect = cv2.CascadeClassifier(builtin)
+            except Exception:
+                pass
+
+        # Fail early with a clear message if cascade still didn't load
+        if facedetect.empty():
+            with _registration_lock:
+                _registration_progress["status"] = "error"
+            raise RuntimeError(f"Face detection cascade failed to load from {CASCADE_PATH} (exists={exists}, size={size}), and built-in cascade also failed.")
+>>>>>>> 1ed0492 (UI cleanup: removed duplicate buttons, centered header, restored camera access button)
         video = cv2.VideoCapture(0)
 
         if not video.isOpened():
@@ -144,6 +196,13 @@ def start_registration(name: str, role: str = 'user') -> dict:
         return {"success": False, "message": "Name is required"}
 
     name = name.strip()
+<<<<<<< HEAD
+=======
+    # Normalize role to lowercase and safe value
+    role = (role or 'user').strip().lower()
+    if role not in ('admin', 'user'):
+        role = 'user'
+>>>>>>> 1ed0492 (UI cleanup: removed duplicate buttons, centered header, restored camera access button)
 
     # Save the role for later use
     roles_path = os.path.join(DATA_DIR, 'roles.pkl')
