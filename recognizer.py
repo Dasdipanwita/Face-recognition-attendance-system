@@ -20,8 +20,6 @@ _face_cascade = None
 
 def _load_model_and_cascade():
     global _knn, _face_cascade
-
-    # Ensure cv2 is available
     import cv2
 
     # Load KNN model if not already loaded
@@ -30,18 +28,21 @@ def _load_model_and_cascade():
         faces_path = os.path.join(DATA_DIR, 'faces_data.pkl')
         if not (os.path.isfile(names_path) and os.path.isfile(faces_path)):
             raise FileNotFoundError('names.pkl or faces_data.pkl not found in data/. Add faces first.')
+
         with open(names_path, 'rb') as f:
             labels = pickle.load(f)
         with open(faces_path, 'rb') as f:
             faces = pickle.load(f)
-<<<<<<< HEAD
-        # Ensure labels is a list and faces is a numpy array
+
+        # Normalize types
         try:
             labels = list(labels)
         except Exception:
             labels = [str(x) for x in labels]
 
         faces = np.asarray(faces)
+        if faces.ndim != 2:
+            faces = faces.reshape(faces.shape[0], -1)
 
         # If counts mismatch, trim to the smaller length and persist fix
         n_labels = len(labels)
@@ -52,7 +53,6 @@ def _load_model_and_cascade():
             try:
                 labels = labels[:m]
                 faces = faces[:m]
-                # Persist corrected files
                 with open(names_path, 'wb') as f:
                     pickle.dump(labels, f)
                 with open(faces_path, 'wb') as f:
@@ -61,94 +61,38 @@ def _load_model_and_cascade():
             except Exception as e:
                 print(f"⚠️  Failed to persist trimmed data: {e}")
 
-        if faces.ndim != 2:
-            faces = faces.reshape(faces.shape[0], -1)
-=======
-
-        # Ensure labels is a list and faces is a numpy array
+        # Fit KNN
         try:
-            labels = list(labels)
-        except Exception:
-            labels = [str(x) for x in labels]
+            knn = KNeighborsClassifier(n_neighbors=3)
+            knn.fit(faces, labels)
+            _knn = knn
+        except Exception as e:
+            raise RuntimeError(f"Failed to fit recognition model: {e}")
 
-        faces = np.asarray(faces)
+    # Load cascade
+    cascade_loaded = False
+    try:
+        _face_cascade = cv2.CascadeClassifier(CASCADE_PATH)
+        if not _face_cascade.empty():
+            cascade_loaded = True
+    except Exception:
+        pass
 
-        # If counts mismatch, trim to the smaller length and persist fix
-        n_labels = len(labels)
-        n_faces = faces.shape[0] if faces.ndim >= 1 else 0
-        if n_labels != n_faces:
-            m = min(n_labels, n_faces)
-            print(f"⚠️  Mismatch: {n_faces} face samples vs {n_labels} labels. Trimming to {m} entries.")
-            try:
-                labels = labels[:m]
-                faces = faces[:m]
-                # Persist corrected files
-                with open(names_path, 'wb') as f:
-                    pickle.dump(labels, f)
-                with open(faces_path, 'wb') as f:
-                    pickle.dump(faces, f)
-                print("✅ Trimmed and saved corrected `names.pkl` and `faces_data.pkl`")
-            except Exception as e:
-                print(f"⚠️  Failed to persist trimmed data: {e}")
-
-        if faces.ndim != 2:
-            faces = faces.reshape(faces.shape[0], -1)
-
->>>>>>> 1ed0492 (UI cleanup: removed duplicate buttons, centered header, restored camera access button)
-        _knn = KNeighborsClassifier(n_neighbors=3, weights='uniform')
-        _knn.fit(faces, labels)
-        print("✅ KNN model loaded successfully")
-
-    # Load face cascade if not already loaded
-    if _face_cascade is None:
-        # Try multiple approaches to load the cascade
-        cascade_loaded = False
-
-        # Method 1: Try loading from the data directory
-        if os.path.exists(CASCADE_PATH):
-            _face_cascade = cv2.CascadeClassifier(CASCADE_PATH)
+    if not cascade_loaded:
+        # Try OpenCV builtin
+        try:
+            builtin_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            _face_cascade = cv2.CascadeClassifier(builtin_path)
             if not _face_cascade.empty():
-                print(f"✅ Successfully loaded cascade from {CASCADE_PATH}")
                 cascade_loaded = True
-            else:
-                print(f"⚠️  Cascade file exists but failed to load from {CASCADE_PATH}")
+        except Exception:
+            pass
 
-        # Method 2: Try using OpenCV's built-in cascade (if available)
-        if not cascade_loaded:
-            try:
-                # Some OpenCV installations have built-in cascades
-                # Let's try a common alternative path
-                import cv2.data
-                builtin_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-                if os.path.exists(builtin_path):
-                    _face_cascade = cv2.CascadeClassifier(builtin_path)
-                    if not _face_cascade.empty():
-                        print(f"✅ Successfully loaded built-in cascade from {builtin_path}")
-                        cascade_loaded = True
-                    else:
-                        print(f"⚠️  Built-in cascade exists but failed to load from {builtin_path}")
-            except:
-                pass
-
-        # Method 3: If all else fails, raise an error with helpful instructions
-        if not cascade_loaded:
-            error_msg = f"""
-❌ Failed to load cascade classifier from {CASCADE_PATH}.
-
-This usually means:
-1. The cascade file is corrupted or incomplete
-2. The file was not downloaded properly
-
-To fix this, you can:
-1. Download the correct cascade file manually from:
-   https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml
-   Save it as: {CASCADE_PATH}
-
-2. Or install OpenCV properly which should include the cascade files
-
-3. Or run the download script: python data/download_cascade.py
-"""
-            raise RuntimeError(error_msg)
+    if not cascade_loaded:
+        error_msg = f"Failed to load cascade classifier from {CASCADE_PATH}.\n" \
+                    "Ensure the file exists or install OpenCV's haarcascades.\n" \
+                    f"You can download it from: https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml\n"
+        raise RuntimeError(error_msg)
 
 
 _load_model_and_cascade()

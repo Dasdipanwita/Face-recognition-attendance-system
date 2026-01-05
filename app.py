@@ -138,9 +138,8 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if 'username' not in session:
             flash('Please login to access this page', 'error')
-        base_dir = os.path.dirname(__file__)
-        names_path = os.path.join(base_dir, 'data', 'names.pkl')
-        roles_path = os.path.join(base_dir, 'data', 'roles.pkl')
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
             flash('Admin access required', 'error')
             return redirect(url_for('user_dashboard'))
         return f(*args, **kwargs)
@@ -184,78 +183,11 @@ def home():
 # --- Authentication routes ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If already logged in, redirect to appropriate dashboard
     if 'username' in session:
         if session.get('role') == 'admin':
             return redirect(url_for('admin_dashboard'))
         return redirect(url_for('user_dashboard'))
-        else:
-            registered_names = []
-
-        # Case-insensitive username lookup
-        matched_name = None
-        for name in registered_names:
-            try:
-                if name.lower().strip() == username.lower().strip():
-                    matched_name = name
-                    print(f"[LOGIN DEBUG] matched_name='{matched_name}'")
-                    break
-            except Exception:
-                continue
-
-        # If not found in names.pkl, check if it's an admin in roles.pkl
-        if not matched_name and os.path.isfile(roles_path):
-            try:
-                with open(roles_path, 'rb') as f:
-                    roles = pickle.load(f)
-                    print(f"[LOGIN DEBUG] Checking roles.pkl for admin user '{username}'")
-                    for role_name, role_value in roles.items():
-                        if str(role_name).lower().strip() == username.lower().strip() and str(role_value) == 'admin':
-                            matched_name = role_name
-                            print(f"[LOGIN DEBUG] matched_name (from roles)='{matched_name}'")
-                            break
-            except Exception as e:
-                print(f"[LOGIN DEBUG] Error reading roles.pkl: {e}")
-                pass
-
-        if matched_name:
-            # Load user's role - use exact case from registered names for consistency
-            user_role = 'user'  # default
-            if os.path.isfile(roles_path):
-                with open(roles_path, 'rb') as f:
-                    roles = pickle.load(f)
-                    # Try exact match first, then case-insensitive fallback
-                    user_role = roles.get(matched_name, 'user')
-                    if user_role == 'user':
-                        # If not found with exact case, try case-insensitive lookup
-                        for role_name, role_value in roles.items():
-                            if role_name.lower() == matched_name.lower():
-                                user_role = role_value
-                                break
-            # Normalize role string to lowercase to avoid case-sensitivity issues
-            try:
-                user_role = user_role.lower()
-            except Exception:
-                user_role = str(user_role).lower()
-
-            # For admin users, verify password
-            if user_role == 'admin':
-                stored_hash = get_admin_password_hash(matched_name)
-                if not check_password_hash(stored_hash, password):
-                    flash('Invalid password for admin user', 'error')
-                    return render_template('login.html', title='Login')
-
-            session['username'] = matched_name
-            session['role'] = user_role
-
-            if user_role == 'admin':
-                flash(f'Welcome Admin {matched_name}!', 'success')
-                return redirect(url_for('admin_dashboard'))
-            else:
-                flash(f'Welcome {matched_name}!', 'success')
-                return redirect(url_for('user_dashboard'))
-        else:
-            print(f"[LOGIN DEBUG] No match for username='{username}'")
-            flash('User not registered. Please register first.', 'error')
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -263,112 +195,57 @@ def login():
 
         # Check if user is registered
         import pickle
-<<<<<<< HEAD
-        names_path = os.path.join('data', 'names.pkl')
-        roles_path = os.path.join('data', 'roles.pkl')
-=======
         base_dir = os.path.dirname(__file__)
         names_path = os.path.join(base_dir, 'data', 'names.pkl')
         roles_path = os.path.join(base_dir, 'data', 'roles.pkl')
->>>>>>> 1ed0492 (UI cleanup: removed duplicate buttons, centered header, restored camera access button)
 
+        # Load registered names if available
         if os.path.isfile(names_path):
-            with open(names_path, 'rb') as f:
-                registered_names = list(set(pickle.load(f)))
-<<<<<<< HEAD
-
-            # Case-insensitive username lookup
-            matched_name = None
-            for name in registered_names:
-                if name.lower() == username.lower():
-                    matched_name = name
-                    break
-
-            if matched_name:
-                # Load user's role - use exact case from registered names for consistency
-                user_role = 'user'  # default
-                if os.path.isfile(roles_path):
-                    with open(roles_path, 'rb') as f:
-                        roles = pickle.load(f)
-                        # Try exact match first, then case-insensitive fallback
-                        user_role = roles.get(matched_name, 'user')
-                        if user_role == 'user':
-                            # If not found with exact case, try case-insensitive lookup
-                            for role_name, role_value in roles.items():
-                                if role_name.lower() == matched_name.lower():
-                                    user_role = role_value
-                                    break
-
-                # For admin users, verify password
-                if user_role == 'admin':
-                    stored_hash = get_admin_password_hash(matched_name)
-                    if not check_password_hash(stored_hash, password):
-                        flash('Invalid password for admin user', 'error')
-                        return render_template('login.html', title='Login')
-
-                session['username'] = matched_name
-                session['role'] = user_role
-
-                if user_role == 'admin':
-                    flash(f'Welcome Admin {matched_name}!', 'success')
-                    return redirect(url_for('admin_dashboard'))
-                else:
-                    flash(f'Welcome {matched_name}!', 'success')
-                    return redirect(url_for('user_dashboard'))
-            else:
-                flash('User not registered. Please register first.', 'error')
-        else:
-            flash('No users registered yet. Please register first.', 'error')
-=======
+            try:
+                with open(names_path, 'rb') as f:
+                    registered_names = list(pickle.load(f))
+            except Exception:
+                registered_names = []
         else:
             registered_names = []
 
-        # Case-insensitive username lookup
+        # Case-insensitive username lookup in registered names
         matched_name = None
         for name in registered_names:
             try:
-                if name.lower().strip() == username.lower().strip():
+                if str(name).lower().strip() == username.lower().strip():
                     matched_name = name
-                    print(f"[LOGIN DEBUG] matched_name='{matched_name}'")
                     break
             except Exception:
                 continue
 
-        # If not found in names.pkl, check if it's an admin in roles.pkl
+        # If not found in names.pkl, check roles.pkl for an admin match
         if not matched_name and os.path.isfile(roles_path):
             try:
                 with open(roles_path, 'rb') as f:
                     roles = pickle.load(f)
-                    print(f"[LOGIN DEBUG] Checking roles.pkl for admin user '{username}'")
-                    for role_name, role_value in roles.items():
-                        # print(f"[LOGIN DEBUG] Checking role: {role_name} -> {role_value}")
-                        if str(role_name).lower().strip() == username.lower().strip() and str(role_value) == 'admin':
-                            matched_name = role_name
-                            print(f"[LOGIN DEBUG] matched_name (from roles)='{matched_name}'")
-                            break
-            except Exception as e:
-                print(f"[LOGIN DEBUG] Error reading roles.pkl: {e}")
+                for role_name, role_value in roles.items():
+                    if str(role_name).lower().strip() == username.lower().strip() and str(role_value).lower() == 'admin':
+                        matched_name = role_name
+                        break
+            except Exception:
                 pass
 
         if matched_name:
-            # Load user's role - use exact case from registered names for consistency
-            user_role = 'user'  # default
+            # Determine role from roles.pkl if present
+            user_role = 'user'
             if os.path.isfile(roles_path):
-                with open(roles_path, 'rb') as f:
-                    roles = pickle.load(f)
-                    # Try exact match first, then case-insensitive fallback
+                try:
+                    with open(roles_path, 'rb') as f:
+                        roles = pickle.load(f)
                     user_role = roles.get(matched_name, 'user')
-                    if user_role == 'user':
-                        # If not found with exact case, try case-insensitive lookup
-                        for role_name, role_value in roles.items():
-                            if role_name.lower() == matched_name.lower():
-                                user_role = role_value
-                                break
-            # Normalize role string to lowercase to avoid case-sensitivity issues
+                except Exception:
+                    user_role = 'user'
+
             try:
-                user_role = user_role.lower()
-            except Exception:
                 user_role = str(user_role).lower()
+            except Exception:
+                user_role = 'user'
 
             # For admin users, verify password
             if user_role == 'admin':
@@ -386,10 +263,8 @@ def login():
             else:
                 flash(f'Welcome {matched_name}!', 'success')
                 return redirect(url_for('user_dashboard'))
-        else:
-            print(f"[LOGIN DEBUG] No match for username='{username}'")
-            flash('User not registered. Please register first.', 'error')
->>>>>>> 1ed0492 (UI cleanup: removed duplicate buttons, centered header, restored camera access button)
+
+        flash('User not registered. Please register first.', 'error')
 
     return render_template('login.html', title='Login')
 
@@ -400,7 +275,7 @@ def logout():
     session.clear()
     flash(f'Goodbye {username}! You have been logged out.', 'info')
     return redirect(url_for('login'))
-
+    # If already logged in, redirect to appropriate dashboard
 
 @app.route('/admin/change-password', methods=['GET', 'POST'])
 @admin_required
@@ -411,9 +286,15 @@ def change_admin_password():
         current_password = request.form.get('current_password', '')
         new_password = request.form.get('new_password', '')
         confirm_password = request.form.get('confirm_password', '')
-
-        # Validate current password for this specific admin
-        stored_hash = get_admin_password_hash(username)
+        # Load registered names if available
+        if os.path.isfile(names_path):
+            try:
+                with open(names_path, 'rb') as f:
+                    registered_names = list(pickle.load(f))
+            except Exception:
+                registered_names = []
+        else:
+            registered_names = []
         if not check_password_hash(stored_hash, current_password):
             flash('Current password is incorrect.', 'error')
             return render_template('change_password.html', title='Change Password', min_length=ADMIN_PASSWORD_MIN_LENGTH)
