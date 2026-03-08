@@ -95,7 +95,11 @@ def _load_model_and_cascade():
         raise RuntimeError(error_msg)
 
 
-_load_model_and_cascade()
+try:
+    _load_model_and_cascade()
+except Exception as _startup_err:
+    print(f"[WARN] Could not load face recognition model on startup: {_startup_err}")
+    print("[WARN] Face recognition will be unavailable until data files are present in data/.")
 
 def _today_csv_path():
     date = datetime.now().strftime('%d-%m-%Y')

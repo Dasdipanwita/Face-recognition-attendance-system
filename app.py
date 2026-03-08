@@ -12,7 +12,7 @@ import recognizer  # local module controlling webcam recognizer thread
 import registration  # local module for user registration
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'  # Required for flash messages
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 # Default admin credentials (change in production!)
 ADMIN_USERNAME = 'admin'

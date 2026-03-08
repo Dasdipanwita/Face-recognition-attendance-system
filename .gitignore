@@ -10,4 +10,5 @@ venv/
 # Local files & models
 Attendance/
 static/faces/
-*.pkl
+# Allow data/*.pkl (face model needed for Render deployment)
+# *.pkl
