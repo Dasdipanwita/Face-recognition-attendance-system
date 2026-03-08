@@ -163,6 +163,39 @@
           if (data.match) {
             showPopup(data.message || 'Attendance recorded', 'success');
             stopCamera();
+          } else if (data.not_allowed) {
+            // Show access denied with option to request access
+            const msg = data.message || 'You are not allowed to mark attendance.';
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+              position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:9999;`;
+            const box = document.createElement('div');
+            box.style.cssText = 'background:white; padding:2rem; border-radius:12px; max-width:420px; text-align:center;';
+            box.innerHTML = `<h3 style="margin-top:0;">Access Denied</h3><p style="color:#64748b">${msg}</p>`;
+            const btn = document.createElement('button');
+            btn.textContent = 'Request Access';
+            btn.className = 'btn btn-warning';
+            btn.onclick = async function(){
+              try{
+                const res = await fetch('{{ url_for('user_request_access') }}', { method: 'POST' });
+                const j = await res.json();
+                alert(j.message || 'Request sent');
+                overlay.remove();
+                stopCamera();
+              }catch(e){
+                alert('Failed to send request');
+              }
+            };
+            const close = document.createElement('button');
+            close.textContent = 'Close';
+            close.className = 'btn btn-secondary';
+            close.style.marginLeft = '0.5rem';
+            close.onclick = function(){ overlay.remove(); };
+            box.appendChild(btn);
+            box.appendChild(close);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+            stopCamera();
           } else if ((data.message || '').toLowerCase().includes('face not recognized')) {
             showPopup(data.message || 'Face not recognized', 'error');
             stopCamera();

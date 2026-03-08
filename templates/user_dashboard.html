@@ -42,5 +42,19 @@
       <p><strong>Role:</strong> User</p>
       <p><strong>Access Level:</strong> Can view own attendance records only</p>
     </div>
+        <div style="margin-top:1rem;">
+          <button id="requestAccessBtn" class="btn btn-warning">Request Access to Mark Attendance</button>
+        </div>
   </div>
+    <script>
+      document.getElementById('requestAccessBtn').addEventListener('click', async function(){
+        try{
+          const res = await fetch('{{ url_for('user_request_access') }}', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+          const j = await res.json();
+          alert(j.message || 'Request sent');
+        } catch(e){
+          alert('Failed to send request');
+        }
+      });
+    </script>
 {% endblock %}

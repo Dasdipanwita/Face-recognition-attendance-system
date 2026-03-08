@@ -71,7 +71,44 @@
                     </div>
                 </div>
 
-                <!-- Add New User Form -->
+                    <!-- Pending Access Requests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h4><i class="fas fa-inbox text-warning me-2"></i>Pending Access Requests</h4>
+                            <div class="row">
+                                {% if access_requests %}
+                                    {% for req in access_requests %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="user-card" style="border-left-color: #f59e0b;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1">{{ req }}</h6>
+                                                    <small class="text-muted">Requested access to mark attendance</small>
+                                                </div>
+                                                <div>
+                                                    <form method="POST" action="{{ url_for('approve_access_request') }}" style="display:inline-block;">
+                                                        <input type="hidden" name="username" value="{{ req }}">
+                                                        <button type="submit" class="btn btn-success btn-sm me-1"><i class="fas fa-check"></i></button>
+                                                    </form>
+                                                    <form method="POST" action="{{ url_for('deny_access_request') }}" style="display:inline-block;">
+                                                        <input type="hidden" name="username" value="{{ req }}">
+                                                        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i></button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="col-12">
+                                        <p class="text-muted">No pending access requests.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add New User Form -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-card">

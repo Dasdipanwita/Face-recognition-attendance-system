@@ -422,6 +422,9 @@ def detect():
         # Map recognizer responses to the new schema
         if result.get("attendance_recorded"):
             return jsonify({"match": True, "message": result.get("message", "Attendance recorded")})
+        if result.get("attendance_denied"):
+            # User was recognized but not allowed to mark attendance
+            return jsonify({"match": False, "message": result.get("message", "Access denied"), "not_allowed": True})
         if result.get("recognition_failed"):
             # Check if camera should be shut down due to security alert
             if result.get("camera_shutdown"):
@@ -534,21 +537,87 @@ def registration_feed():
 def manage_allowed_users():
     """Admin page to manage which users can mark attendance"""
     allowed_users = recognizer._get_allowed_users()
-    return render_template('manage_users.html', title='Manage Allowed Users', allowed_users=allowed_users)
+    access_requests = recognizer._get_access_requests()
+    return render_template('manage_users.html', title='Manage Allowed Users', allowed_users=allowed_users, access_requests=access_requests)
+
+
+@app.route('/user/request-access', methods=['POST'])
+@login_required
+def user_request_access():
+    username = session.get('username')
+    if not username:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+    recognizer._add_access_request(username)
+    return jsonify({"success": True, "message": "Access request sent to admins"})
+
+
+@app.route('/admin/allowed-users/requests/approve', methods=['POST'])
+@admin_required
+def approve_access_request():
+    username = request.form.get('username', '').strip()
+    if not username:
+        flash('No username provided', 'error')
+        return redirect(url_for('manage_allowed_users'))
+    recognizer._add_allowed_user(username)
+    recognizer._remove_access_request(username)
+    flash(f'Approved access request for "{username}"', 'success')
+    return redirect(url_for('manage_allowed_users'))
+
+
+@app.route('/admin/allowed-users/requests/deny', methods=['POST'])
+@admin_required
+def deny_access_request():
+    username = request.form.get('username', '').strip()
+    if not username:
+        flash('No username provided', 'error')
+        return redirect(url_for('manage_allowed_users'))
+    recognizer._remove_access_request(username)
+    flash(f'Denied access request for "{username}"', 'info')
+    return redirect(url_for('manage_allowed_users'))
 
 
 @app.route('/admin/allowed-users/add', methods=['POST'])
 @admin_required
 def add_allowed_user():
     """Add a user to the allowed attendance list"""
-    username = request.form.get('username', '').strip()
-    if not username:
-        flash('Please enter a username', 'error')
-        return redirect(url_for('manage_allowed_users'))
+    import traceback
+    try:
+        username = request.form.get('username', '').strip()
+        if not username:
+            flash('Please enter a username', 'error')
+            return redirect(url_for('manage_allowed_users'))
 
-    recognizer._add_allowed_user(username)
-    flash(f'User "{username}" added to allowed list', 'success')
-    return redirect(url_for('manage_allowed_users'))
+        recognizer._add_allowed_user(username)
+        flash(f'User "{username}" added to allowed list', 'success')
+        return redirect(url_for('manage_allowed_users'))
+    except Exception as e:
+        # Log full traceback to a file for easier debugging
+        tb = traceback.format_exc()
+        try:
+            with open(os.path.join(os.path.dirname(__file__), 'error.log'), 'a', encoding='utf-8') as ef:
+                ef.write(f"[add_allowed_user] {datetime.now().isoformat()}\n")
+                ef.write(tb + "\n\n")
+        except Exception:
+            pass
+        # Also append request and session context for deeper debugging
+        try:
+            ctx = {
+                'form': request.form.to_dict(flat=True),
+                'session': dict(session),
+                'remote_addr': request.remote_addr,
+                'path': request.path,
+                'method': request.method,
+                'headers': dict(request.headers)
+            }
+            with open(os.path.join(os.path.dirname(__file__), 'error.log'), 'a', encoding='utf-8') as ef:
+                ef.write('--- Request Context ---\n')
+                ef.write(json.dumps(ctx, default=str, ensure_ascii=False, indent=2) + "\n\n")
+        except Exception:
+            pass
+        print('[ERROR] add_allowed_user exception:', e)
+        print(tb)
+        flash('Internal server error while adding allowed user. Check server logs.', 'error')
+        return redirect(url_for('manage_allowed_users'))
 
 
 @app.route('/admin/allowed-users/remove', methods=['POST'])

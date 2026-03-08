@@ -161,6 +161,14 @@ def recognize_frame(frame, expected_user):
         state['mismatch_name'] = None
 
         if state['confirm_count'] >= 3:
+            # Before writing attendance, verify user is allowed
+            if not _is_user_allowed(expected_user):
+                state['confirm_count'] = 0
+                return {
+                    "attendance_denied": True,
+                    "message": f"Access denied. {expected_user} is not allowed to mark attendance. Please request access from an admin."
+                }
+
             if _should_log(expected_user):
                 _write_attendance(expected_user)
                 state['confirm_count'] = 0
@@ -188,6 +196,7 @@ def recognize_frame(frame, expected_user):
 
 # User access control functions
 _ALLOWED_USERS_FILE = os.path.join(DATA_DIR, 'allowed_users.pkl')
+_ACCESS_REQUESTS_FILE = os.path.join(DATA_DIR, 'access_requests.pkl')
 
 def _get_allowed_users():
     """Get the list of users allowed to mark attendance."""
@@ -212,6 +221,82 @@ def _remove_allowed_user(username):
     if username in allowed_users:
         allowed_users.remove(username)
         _save_allowed_users(allowed_users)
+
+
+def _save_allowed_users(users):
+    """Persist the allowed users list to disk."""
+    try:
+        os.makedirs(os.path.dirname(_ALLOWED_USERS_FILE), exist_ok=True)
+        with open(_ALLOWED_USERS_FILE, 'wb') as f:
+            pickle.dump(users, f)
+    except Exception:
+        pass
+
+
+def _is_user_allowed(username: str) -> bool:
+    """Return True if username is allowed to mark attendance (in allowed list or an admin)."""
+    # Exact-match check (case-insensitive)
+    allowed = _get_allowed_users()
+    for u in allowed:
+        try:
+            if str(u).lower().strip() == str(username).lower().strip():
+                return True
+        except Exception:
+            continue
+
+    # Check roles.pkl for admin role
+    roles_path = os.path.join(DATA_DIR, 'roles.pkl')
+    if os.path.isfile(roles_path):
+        try:
+            with open(roles_path, 'rb') as f:
+                roles = pickle.load(f)
+            role = roles.get(username)
+            if role and str(role).lower().strip() == 'admin':
+                return True
+        except Exception:
+            pass
+
+    return False
+
+
+def _get_access_requests():
+    """Return list of pending access request usernames."""
+    if os.path.exists(_ACCESS_REQUESTS_FILE):
+        try:
+            with open(_ACCESS_REQUESTS_FILE, 'rb') as f:
+                return pickle.load(f)
+        except Exception:
+            pass
+    return []
+
+
+def _add_access_request(username: str):
+    """Add a user's request to be allowed. Avoid duplicates."""
+    requests = _get_access_requests()
+    for r in requests:
+        try:
+            if str(r).lower().strip() == str(username).lower().strip():
+                return
+        except Exception:
+            continue
+    requests.append(username)
+    try:
+        os.makedirs(os.path.dirname(_ACCESS_REQUESTS_FILE), exist_ok=True)
+        with open(_ACCESS_REQUESTS_FILE, 'wb') as f:
+            pickle.dump(requests, f)
+    except Exception:
+        pass
+
+
+def _remove_access_request(username: str):
+    requests = _get_access_requests()
+    cleaned = [r for r in requests if not (str(r).lower().strip() == str(username).lower().strip())]
+    try:
+        os.makedirs(os.path.dirname(_ACCESS_REQUESTS_FILE), exist_ok=True)
+        with open(_ACCESS_REQUESTS_FILE, 'wb') as f:
+            pickle.dump(cleaned, f)
+    except Exception:
+        pass
 
 def reset_camera_state(username):
     """Reset camera state for a user after security shutdown (admin only)"""
