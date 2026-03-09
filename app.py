@@ -4,7 +4,11 @@ import csv
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+try:
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -21,6 +25,19 @@ ADMIN_CREDS_PATH = os.path.join(os.path.dirname(__file__), 'config', 'admin_cred
 ADMIN_PASSWORD_MIN_LENGTH = 8
 
 ATT_DIR = os.path.join(os.path.dirname(__file__), 'Attendance')
+
+
+def _get_app_timezone():
+    tz_name = os.environ.get('APP_TIMEZONE')
+    if tz_name and ZoneInfo:
+        try:
+            return ZoneInfo(tz_name)
+        except Exception:
+            pass
+    try:
+        return datetime.now().astimezone().tzinfo or timezone.utc
+    except Exception:
+        return timezone.utc
 
 
 def _ensure_admin_credentials_file():
@@ -53,7 +70,7 @@ def _ensure_admin_credentials_file():
             'admins': {
                 old_username: {
                     'password_hash': old_password_hash,
-                    'last_updated': data.get('last_updated', datetime.now().isoformat())
+                    'last_updated': data.get('last_updated', datetime.now(_get_app_timezone()).isoformat())
                 }
             }
         }
@@ -92,7 +109,7 @@ def get_admin_password_hash(username):
     default_hash = generate_password_hash(ADMIN_DEFAULT_PASSWORD)
     admins[username] = {
         'password_hash': default_hash,
-        'last_updated': datetime.now().isoformat()
+        'last_updated': datetime.now(_get_app_timezone()).isoformat()
     }
     data['admins'] = admins
     with open(ADMIN_CREDS_PATH, 'w', encoding='utf-8') as f:
@@ -110,7 +127,7 @@ def update_admin_password(username, new_password):
     admins = data.get('admins', {})
     admins[username] = {
         'password_hash': generate_password_hash(new_password),
-        'last_updated': datetime.now().isoformat()
+        'last_updated': datetime.now(_get_app_timezone()).isoformat()
     }
     data['admins'] = admins
 
@@ -147,7 +164,7 @@ def admin_required(f):
 
 
 def today_filename():
-    ts = datetime.now()
+    ts = datetime.now(_get_app_timezone())
     date = ts.strftime('%d-%m-%Y')
     return f'Attendance_{date}.csv'
 
@@ -167,7 +184,7 @@ def read_csv_rows(path):
 
 @app.context_processor
 def inject_year():
-    return {'year': datetime.now().year}
+    return {'year': datetime.now(_get_app_timezone()).year}
 
 
 @app.route('/')
@@ -332,7 +349,7 @@ def user_dashboard():
 @login_required
 def user_my_attendance():
     username = session.get('username')
-    date_str = datetime.now().strftime('%d-%m-%Y')
+    date_str = datetime.now(_get_app_timezone()).strftime('%d-%m-%Y')
     path = os.path.join(ATT_DIR, today_filename())
     error = None
     my_records = []
@@ -350,7 +367,7 @@ def user_my_attendance():
 @app.route('/attendance/today')
 @admin_required
 def attendance_today():
-    date_str = datetime.now().strftime('%d-%m-%Y')
+    date_str = datetime.now(_get_app_timezone()).strftime('%d-%m-%Y')
     path = os.path.join(ATT_DIR, today_filename())
     error = None
     records = []
@@ -595,7 +612,7 @@ def add_allowed_user():
         tb = traceback.format_exc()
         try:
             with open(os.path.join(os.path.dirname(__file__), 'error.log'), 'a', encoding='utf-8') as ef:
-                ef.write(f"[add_allowed_user] {datetime.now().isoformat()}\n")
+                ef.write(f"[add_allowed_user] {datetime.now(_get_app_timezone()).isoformat()}\n")
                 ef.write(tb + "\n\n")
         except Exception:
             pass

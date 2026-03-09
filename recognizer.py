@@ -3,7 +3,11 @@ import numpy as np
 import os
 import csv
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+try:
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None
 from sklearn.neighbors import KNeighborsClassifier
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -13,6 +17,24 @@ CASCADE_PATH = os.path.join(DATA_DIR, 'haarcascade_frontalface_default.xml')
 # In-memory state for each user
 _user_states = {}
 _last_logged_at = {}
+
+
+def _get_app_timezone():
+    """Return a tzinfo to use for timestamps.
+    Priority: APP_TIMEZONE env var (IANA name) -> system local tz -> UTC
+    """
+    tz_name = os.environ.get('APP_TIMEZONE')
+    if tz_name:
+        if ZoneInfo:
+            try:
+                return ZoneInfo(tz_name)
+            except Exception:
+                pass
+
+    try:
+        return datetime.now().astimezone().tzinfo or timezone.utc
+    except Exception:
+        return timezone.utc
 
 # Load model and cascade once on startup
 _knn = None
@@ -102,7 +124,8 @@ except Exception as _startup_err:
     print("[WARN] Face recognition will be unavailable until data files are present in data/.")
 
 def _today_csv_path():
-    date = datetime.now().strftime('%d-%m-%Y')
+    tz = _get_app_timezone()
+    date = datetime.now(tz).strftime('%d-%m-%Y')
     return os.path.join(ATT_DIR, f'Attendance_{date}.csv')
 
 def _ensure_csv_header(path):
@@ -113,7 +136,7 @@ def _ensure_csv_header(path):
             writer.writerow(['NAME', 'TIME'])
 
 def _should_log(name: str, cooldown_seconds: int = 60) -> bool:
-    now = datetime.now()
+    now = datetime.now(_get_app_timezone())
     last = _last_logged_at.get(name)
     if last is None or (now - last) > timedelta(seconds=cooldown_seconds):
         return True
@@ -122,10 +145,11 @@ def _should_log(name: str, cooldown_seconds: int = 60) -> bool:
 def _write_attendance(name: str):
     path = _today_csv_path()
     _ensure_csv_header(path)
-    ts = datetime.now().strftime('%H:%M:%S')
+    now = datetime.now(_get_app_timezone())
+    ts = now.strftime('%H:%M:%S')
     with open(path, 'a', newline='', encoding='utf-8') as f:
         csv.writer(f).writerow([name, ts])
-    _last_logged_at[name] = datetime.now()
+    _last_logged_at[name] = now
     print(f"[WRITE] Attendance written: {name} at {ts}")
 
 def recognize_frame(frame, expected_user):
