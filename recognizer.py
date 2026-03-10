@@ -13,23 +13,33 @@ from sklearn.neighbors import KNeighborsClassifier
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 ATT_DIR = os.path.join(os.path.dirname(__file__), 'Attendance')
 CASCADE_PATH = os.path.join(DATA_DIR, 'haarcascade_frontalface_default.xml')
+DEFAULT_TIMEZONE_NAME = 'Asia/Kolkata'
 
 # In-memory state for each user
 _user_states = {}
 _last_logged_at = {}
 
 
+def _fallback_timezone(tz_name):
+    if tz_name == 'Asia/Kolkata':
+        return timezone(timedelta(hours=5, minutes=30), name='IST')
+    return None
+
+
 def _get_app_timezone():
     """Return a tzinfo to use for timestamps.
-    Priority: APP_TIMEZONE env var (IANA name) -> TZ env var -> system local tz -> UTC
+    Priority: APP_TIMEZONE env var (IANA name) -> TZ env var -> default app timezone -> system local tz -> UTC
     """
-    tz_name = os.environ.get('APP_TIMEZONE') or os.environ.get('TZ')
+    tz_name = os.environ.get('APP_TIMEZONE') or os.environ.get('TZ') or DEFAULT_TIMEZONE_NAME
     if tz_name:
         if ZoneInfo:
             try:
                 return ZoneInfo(tz_name)
             except Exception:
                 pass
+        fallback_tz = _fallback_timezone(tz_name)
+        if fallback_tz is not None:
+            return fallback_tz
 
     try:
         return datetime.now().astimezone().tzinfo or timezone.utc

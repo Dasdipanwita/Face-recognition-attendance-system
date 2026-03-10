@@ -4,7 +4,7 @@ import csv
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 try:
     from zoneinfo import ZoneInfo
 except Exception:
@@ -25,15 +25,25 @@ ADMIN_CREDS_PATH = os.path.join(os.path.dirname(__file__), 'config', 'admin_cred
 ADMIN_PASSWORD_MIN_LENGTH = 8
 
 ATT_DIR = os.path.join(os.path.dirname(__file__), 'Attendance')
+DEFAULT_TIMEZONE_NAME = 'Asia/Kolkata'
+
+
+def _fallback_timezone(tz_name):
+    if tz_name == 'Asia/Kolkata':
+        return timezone(timedelta(hours=5, minutes=30), name='IST')
+    return None
 
 
 def _get_app_timezone():
-    tz_name = os.environ.get('APP_TIMEZONE') or os.environ.get('TZ')
+    tz_name = os.environ.get('APP_TIMEZONE') or os.environ.get('TZ') or DEFAULT_TIMEZONE_NAME
     if tz_name and ZoneInfo:
         try:
             return ZoneInfo(tz_name)
         except Exception:
             pass
+    fallback_tz = _fallback_timezone(tz_name)
+    if fallback_tz is not None:
+        return fallback_tz
     try:
         return datetime.now().astimezone().tzinfo or timezone.utc
     except Exception:
