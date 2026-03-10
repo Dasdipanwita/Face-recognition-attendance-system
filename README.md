@@ -60,6 +60,11 @@ scripts/                   # Helper scripts
 2. Open your browser and navigate to `http://127.0.0.1:5000`.
 3. Use the admin credentials to log in and manage the system.
 
+## Timezone Configuration
+- Attendance timestamps use `APP_TIMEZONE` first, then `TZ`, then the server's local timezone.
+- For Render deployments, set `APP_TIMEZONE` to your local IANA timezone name such as `Asia/Kolkata`, `Asia/Dhaka`, or `Europe/London`.
+- This repository's `render.yaml` currently sets the service timezone to `Asia/Kolkata`. Change that value if your deployment should use another timezone.
+
 ## File Descriptions
 - **`app.py`**: The main entry point for the application.
 - **`recognizer.py`**: Contains the logic for face recognition.

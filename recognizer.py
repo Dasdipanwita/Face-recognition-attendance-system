@@ -21,9 +21,9 @@ _last_logged_at = {}
 
 def _get_app_timezone():
     """Return a tzinfo to use for timestamps.
-    Priority: APP_TIMEZONE env var (IANA name) -> system local tz -> UTC
+    Priority: APP_TIMEZONE env var (IANA name) -> TZ env var -> system local tz -> UTC
     """
-    tz_name = os.environ.get('APP_TIMEZONE')
+    tz_name = os.environ.get('APP_TIMEZONE') or os.environ.get('TZ')
     if tz_name:
         if ZoneInfo:
             try:

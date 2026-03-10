@@ -28,7 +28,7 @@ ATT_DIR = os.path.join(os.path.dirname(__file__), 'Attendance')
 
 
 def _get_app_timezone():
-    tz_name = os.environ.get('APP_TIMEZONE')
+    tz_name = os.environ.get('APP_TIMEZONE') or os.environ.get('TZ')
     if tz_name and ZoneInfo:
         try:
             return ZoneInfo(tz_name)

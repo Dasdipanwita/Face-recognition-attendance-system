@@ -9,3 +9,7 @@ services:
         value: 3.11.9
       - key: SECRET_KEY
         generateValue: true
+      - key: APP_TIMEZONE
+        value: Asia/Kolkata
+      - key: TZ
+        value: Asia/Kolkata
